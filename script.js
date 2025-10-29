@@ -1,5 +1,6 @@
-// 
-const weatherAPIKey = window?.env?.NEXT_PUBLIC_WEATHER_API_KEY || "";
+
+var weatherAPIKey = "fe93bcfdee45155c2f92f3f469baa855";
+
 
 // 
 const BASE_URL =
@@ -161,4 +162,5 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 
 
 getWeather("Mumbai");
+
 
