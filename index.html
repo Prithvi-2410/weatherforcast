@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App Using OpenWeatherMap</title>
+
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="prefetch" href="media/day1.jpg">
+    <link rel="prefetch" href="media/day2.jpg">
+    <link rel="prefetch" href="media/day3.jpg">
+    <link rel="prefetch" href="media/night1.jpg">
+    <link rel="prefetch" href="media/night4.jpg">
+    <link rel="prefetch" href="media/night5.jpg">
+    <link rel="prefetch" href="media/rainy1.jpg">
+    <link rel="prefetch" href="media/rainy4.jpg">
+    <link rel="prefetch" href="media/rainy5.jpg">
+    <link rel="prefetch" href="media/cloudy1.jpg">
+    <link rel="prefetch" href="media/cloudy2.jpg">
+    <link rel="prefetch" href="media/cloudy3.jpg">
+    <link rel="prefetch" href="media/cloudy4.jpg">
+    <link rel="prefetch" href="icons/loader.gif">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            /* ✅ FIX 1: Ensures the background covers the entire viewport height */
+            background-repeat: no-repeat !important;
+            background-size: cover !important;
+            background-attachment: fixed;
+            min-height: 100vh; /* Use min-height to allow content overflow */
+        }
+
+        @media (max-width: 600px) {
+            body {
+                height: 100%;
+            }
+        }
+
+        /* Styles from the original bottom <style> block */
+        .insights-section {
+            margin: 40px auto;
+            width: 90%;
+            /* ✅ FIX 2: Increased max-width for "horizontal" or wider feel */
+            max-width: 1400px;
+            text-align: center;
+            color: white;
+        }
+
+        /* ---------------------------------------------------- */
+        /* CLOUD CARD STYLES (from previous fix) */
+        .cloud-card {
+            display: inline-block;
+            width: 250px;
+            background: none; 
+            padding: 15px;
+            margin: 10px;
+            border-radius: 12px;
+            border: 2px solid #00eaff;
+            background-size: cover !important;
+            background-position: center !important;
+            min-height: 250px; 
+            box-shadow: 0 0 15px rgba(0, 234, 255, 0.5); 
+            position: relative; 
+            overflow: hidden;
+            color: white; 
+            text-align: left;
+        }
+        
+        .cloud-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 30, 40, 0.65);
+            border-radius: 10px;
+            z-index: 1;
+        }
+
+        .cloud-card h3, .cloud-card p {
+            position: relative;
+            z-index: 2;
+        }
+
+        #cumulonimbusCard {
+            background-image: url("media/cloudy4.jpg");
+        }
+
+        #cirrusCard {
+            background-image: url("media/cloudy2.jpg");
+        }
+
+        #stratusCard {
+            background-image: url("media/cloudy3.jpg");
+        }
+        /* ---------------------------------------------------- */
+
+        .aq-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+        }
+
+        .aq-table th,
+        .aq-table td {
+            border: 2px solid #00eaff;
+            padding: 10px;
+        }
+
+        /* ---------------------------------------------------- */
+        /* SECTION BACKGROUNDS */
+        #cloudTypes {
+            background: none !important; 
+            padding: 30px 0; 
+            border-radius: 16px;
+            backdrop-filter: none;
+            background-color: transparent !important;
+        }
+
+        #airQualityBreakdown {
+            background: url("") center/cover no-repeat;
+            padding: 30px;
+            border-radius: 16px;
+            backdrop-filter: blur(3px);
+            background-color: rgba(30, 30, 40, 0.7);
+        }
+
+        #seasonalStats {
+            background: url("se.png") center/cover no-repeat; 
+            padding: 30px;
+            border-radius: 16px;
+            backdrop-filter: blur(3px);
+            background-color: rgba(30, 30, 40, 0.7);
+        }
+
+        /* FIX FOR RAINFALL SECTION: Using rain.png as requested */
+        #rainForecast {
+            background: url("rain.png") center/cover no-repeat; 
+            padding: 30px;
+            border-radius: 16px;
+            backdrop-filter: blur(3px);
+            background-color: rgba(30, 30, 40, 0.7); 
+            border: 2px solid #00eaff; 
+            box-shadow: 0 0 15px rgba(0, 234, 255, 0.5); 
+        }
+
+        /* CLEAN NEON BORDER LOOK */
+        .insights-section h2 {
+            color: #00eaff;
+            text-shadow: 0 0 6px #00eaff;
+        }
+
+        /* Graph Click-Zoom Animation Styles */
+        .insights-graph {
+            width: 75%;
+            max-width: 550px;
+            border: 3px solid #00eaff;
+            border-radius: 16px;
+            margin: 15px auto;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .insights-graph:hover {
+            box-shadow: 0 0 20px #00eaff;
+        }
+
+        .insights-graph.zoomed {
+            transform: scale(1.7);
+            z-index: 9999;
+            position: relative;
+        }
+    </style>
+</head>
+
+<body>
+
+    <ul class="navbar">
+        <li style="float: left; margin-left: -10px;" class="forecast">
+            <a class="repo-link" href="#">⛄ Forecast</a>
+        </li>
+        <li><a id="resetBtn" href="#">⟳</a></li>
+        <li><a href="#">☆</a></li>
+        <li><a href="#">···</a></li>
+        <li>
+            <input spellcheck="false" class="search-city" id="searchCity" type="text" autocomplete="off"
+                placeholder="🔍︎ Search City">
+        </li>
+    </ul>
+
+    <ul class="mobile-navbar">
+        <li><input spellcheck="false" class="mobile-search-city" id="mobileSearchCity" type="text"
+                autocomplete="off" placeholder="Search City..."></li>
+    </ul>
+
+    <h1 class="location-name" id="locationName">Search City...</h1>
+
+    <div class="temperature-container">
+        <div class="temperature-icon"><img class="imgs-as-icons" src="icons/sunny.png" alt="Sunny icon"></div>
+        <div class="temperature-value" id="temperatureValue"></div>
+    </div>
+
+    <h2 class="weather-type" id="weatherType"></h2>
+
+    <div class="additionals-first-row">
+        <span class="air-quality-additional">
+            <span class="air-quality-additional-label">Air Quality Index </span>
+            <span class="air-quality-index-additional-value">Moderate</span>
+        </span>
+        <span class="real-feel-additional">
+            <span class="real-feel-additional-label">Real Feel </span>
+            <span class="real-feel-additional-value" id="realFeelAdditionalValue">-</span>
+        </span>
+        <span class="humidity-additional">
+            <span class="humidity-additional-label">Humidity </span>
+            <span class="humidity-additional-value" id="humidityAdditionalValue">-</span>
+        </span>
+        <span class="max-temperature-additional">
+            <span class="max-temperature-additional-label">Highest Temperature </span>
+            <span class="max-temperature-additional-value" id="maxTemperatureAdditionalValue">-</span>
+        </span>
+        <span class="min-temperature-additional">
+            <span class="min-temperature-additional-label">Lowest Temperature </span>
+            <span class="min-temperature-additional-value" id="minTemperatureAdditionalValue">-</span>
+        </span>
+    </div>
+
+    <div class="additionals-second-row">
+        <span class="wind-speed-additional">
+            <span class="wind-speed-additional-label">Wind Speed </span>
+            <span class="wind-speed-additional-value" id="windSpeedAdditionalValue">-</span>
+        </span>
+        <span class="wind-direction-additional">
+            <span class="wind-direction-additional-label">Wind Direction </span>
+            <span class="wind-direction-additional-value" id="windDirectionAdditionalValue">-</span>
+        </span>
+        <span class="visibility-additional">
+            <span class="visibility-additional-label">Visibility </span>
+            <span class="visibility-additional-value" id="visibilityAdditionalValue">-</span>
+        </span>
+        <span class="pressure-additional">
+            <span class="pressure-additional-label">Pressure </span>
+            <span class="pressure-additional-value" id="pressureAdditionalValue">-</span>
+        </span>
+        <span class="sunrise-additional">
+            <span class="sunrise-additional-label">Sunrise </span>
+            <span class="sunrise-additional-value" id="sunriseAdditionalValue">-</span>
+        </span>
+        <span class="sunset-additional">
+            <span class="sunset-additional-label">Sunset </span>
+            <span class="sunset-additional-value" id="sunsetAdditionalValue">-</span>
+        </span>
+    </div>
+
+    <div class="daily-forecast">
+        <h2 class="daily-forecast-label">Daily</h2>
+        <div id="forecast-container" class="forecast-container"></div>
+    </div>
+
+    <section id="cityAnalysis">
+        <h2>City Average Temperatures</h2>
+        <div id="cityStats"></div>
+    </section>
+
+    <section id="plots">
+        <h2>Temperature & Humidity Trends</h2>
+        <div id="imagesContainer" style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;"></div>
+    </section>
+
+    <script>
+        const cities = ["Mumbai", "Delhi", "Kolkata", "Hyderabad", "Bangalore", "Chennai"];
+        const imageTypes = ["temp_range", "humidity_vs_temp", "weather_patterns"];
+        const container = document.getElementById("imagesContainer");
+        imageTypes.forEach(type => {
+            cities.forEach(city => {
+                const img = document.createElement("img");
+                img.src = `plots/${type}_${city}.png`;
+                img.style.width = "300px";
+                img.style.borderRadius = "10px";
+                img.style.border = "2px solid #00eaff";
+                img.style.margin = "10px";
+                img.alt = `${type} graph for ${city}`;
+                container.appendChild(img);
+            });
+        });
+    </script>
+
+    <section id="forecast">
+        <h2>Forecast Data</h2>
+        <table id="forecastTable"></table>
+    </section>
+
+    <section id="cloudTypes" class="insights-section">
+        <h2>☁️ Cloud Type Info</h2>
+        <img id="seasonGraph" class="insights-graph zoomable" src="cloud.png" alt="Seasonal Graph">
+        <p>Tap a cloud to learn what weather it brings!</p>
+
+        <div id="cumulonimbusCard" class="cloud-card">
+            <h3>Cumulonimbus</h3>
+            <p class="cloud-info">Tall, dark clouds — ⚠ thunderstorms & heavy rain expected.</p>
+        </div>
+
+        <div id="cirrusCard" class="cloud-card">
+            <h3>Cirrus</h3>
+            <p class="cloud-info">Feathery clouds — 🌤 usually signal fair weather.</p>
+        </div>
+
+        <div id="stratusCard" class="cloud-card">
+            <h3>Stratus</h3>
+            <p class="cloud-info">Layered grey sheet — ☁ overcast & light drizzle.</p>
+        </div>
+    </section>
+
+    <section id="airQualityBreakdown" class="insights-section">
+        <h2>🧭 Air Quality Breakdown</h2>
+        <p>AQI category & pollutants affecting your health</p>
+        <table class="aq-table">
+            <tr>
+                <th>Pollutant</th>
+                <th>Value</th>
+                <th>Category</th>
+            </tr>
+            <tr>
+                <td>PM2.5</td>
+                <td id="pm25Value">-</td>
+                <td id="pm25Category">-</td>
+            </tr>
+            <tr>
+                <td>PM10</td>
+                <td id="pm10Value">-</td>
+                <td id="pm10Category">-</td>
+            </tr>
+            <tr>
+                <td>O₃</td>
+                <td id="o3Value">-</td>
+                <td id="o3Category">-</td>
+            </tr>
+            <tr>
+                <td>NO₂</td>
+                <td id="no2Value">-</td>
+                <td id="no2Category">-</td>
+            </tr>
+        </table>
+    </section>
+
+    <section id="seasonalStats" class="insights-section">
+        <h2>📅 Seasonal Stats</h2>
+        <p>Best month to visit: <strong id="bestSeason">-</strong></p>
+        <img id="seasonGraph" class="insights-graph zoomable" src="se.png" alt="Seasonal Graph">
+    </section>
+
+    <section id="rainForecast" class="insights-section">
+        <h2>💧 Rainfall Probability</h2>
+        <p>Next 7 Days Rain Prediction</p>
+        <img id="rainGraph" class="insights-graph zoomable" src="rain.png" alt="Rain Graph">
+        
+        <div style="text-align: center; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; margin-top: 20px;">
+            <h3>🌧️ Rainfall Summary and Advice</h3>
+            <ul style="list-style: none; padding: 0; display: inline-block; text-align: left; line-height: 1.8;">
+                <li>**Total 7-Day Accumulation:** 45 mm expected</li>
+                <li>**Highest Probability Day:** Thursday (85% chance)</li>
+                <li>**Average Daily Temp:** 25°C during rain spells</li>
+                <li>**Advice:** Heavy localized showers are expected. Carry rain gear!</li>
+            </ul>
+        </div>
+    </section>
+    <script>
+        // This script handles the click-to-zoom for graph images
+        document.querySelectorAll(".insights-graph, #imagesContainer img").forEach(img => {
+            img.style.transition = "transform 0.4s ease";
+            img.style.cursor = "pointer";
+            img.addEventListener("click", () => {
+                img.classList.toggle("zoomed");
+                if (img.classList.contains("zoomed")) {
+                    img.style.transform = "scale(1.8)";
+                    img.style.zIndex = "999";
+                    img.style.position = "relative";
+                } else {
+                    img.style.transform = "scale(1)";
+                    img.style.zIndex = "1";
+                    img.style.position = "static"; // Reset position when not zoomed
+                }
+            });
+        });
+    </script>
+
+    <script src="script.js"></script>
+    <script src="mobile.js"></script>
+
+</body>
+
+</html>
